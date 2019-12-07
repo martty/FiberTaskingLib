@@ -69,10 +69,10 @@ public:
 	TaskScheduler &operator=(TaskScheduler &&) noexcept = delete;
 	~TaskScheduler();
 
+	std::size_t m_numThreads{0};
 private:
 	constexpr static std::size_t kFTLInvalidIndex = UINT_MAX;
 
-	std::size_t m_numThreads{0};
 	std::vector<ThreadType> m_threads;
 
 	std::size_t m_fiberPoolSize{0};
@@ -187,8 +187,7 @@ public:
 	 * @param threadPoolSize    The size of the thread pool to run. 0 corresponds to NumHardwareThreads()
 	 * @param behavior          The behavior of the threads after they have no work to do.
 	 */
-	void Run(uint fiberPoolSize, TaskFunction mainTask, void *mainTaskArg = nullptr, uint threadPoolSize = 0,
-	         EmptyQueueBehavior behavior = EmptyQueueBehavior::Spin);
+	void Run(uint fiberPoolSize, TaskFunction mainTask, void *mainTaskArg = nullptr, uint threadPoolSize = 0, EmptyQueueBehavior behavior = EmptyQueueBehavior::Spin, void(*thread_init_callback)() = nullptr);
 
 	/**
 	 * Adds a task to the internal queue.

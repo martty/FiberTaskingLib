@@ -26,19 +26,30 @@
 
 #include "ftl/atomic_counter.h"
 
+#if defined(FTL_WIN32_THREADS)
+#include <Windows.h>
+#include <crtdbg.h>
+#endif
+
+#include <exception>
+#include <eh.h>
+
 namespace ftl {
 
 constexpr static std::size_t kFailedPopAttemptsHeuristic = 5;
 
 struct ThreadStartArgs {
-	TaskScheduler *Scheduler;
-	uint ThreadIndex;
+	TaskScheduler *taskScheduler;
+	uint threadIndex;
+	void(*threadInitCallback)();
 };
 
-FTL_THREAD_FUNC_RETURN_TYPE TaskScheduler::ThreadStart(void *const arg) {
-	auto *const threadArgs = reinterpret_cast<ThreadStartArgs *>(arg);
-	TaskScheduler *taskScheduler = threadArgs->Scheduler;
-	uint const index = threadArgs->ThreadIndex;
+FTL_THREAD_FUNC_RETURN_TYPE TaskScheduler::ThreadStart(void *arg) {
+	ThreadStartArgs *threadArgs = reinterpret_cast<ThreadStartArgs *>(arg);
+	TaskScheduler *taskScheduler = threadArgs->taskScheduler;
+	uint index = threadArgs->threadIndex;
+
+	if (threadArgs->threadInitCallback) threadArgs->threadInitCallback();
 
 	// Clean up
 	delete threadArgs;
@@ -118,9 +129,10 @@ void TaskScheduler::FiberStart(void *const arg) {
 			if (!iter->second->load(std::memory_order_relaxed)) {
 				continue;
 			}
-
+			int v = iter->second->load();
+			auto s = iter->second;
 			waitingFiberIndex = iter->first;
-			delete iter->second;
+			delete s;
 			tls.ReadyFibers.erase(iter);
 			break;
 		}
@@ -222,8 +234,7 @@ TaskScheduler::~TaskScheduler() {
 	delete[] m_tls;
 }
 
-void TaskScheduler::Run(uint const fiberPoolSize, TaskFunction const mainTask, void *const mainTaskArg, uint const threadPoolSize,
-                        EmptyQueueBehavior const behavior) {
+void TaskScheduler::Run(uint fiberPoolSize, TaskFunction mainTask, void *mainTaskArg, uint threadPoolSize, EmptyQueueBehavior behavior, void(*thread_init_callback)()) {
 	// Initialize the flags
 	m_initialized.store(false, std::memory_order::memory_order_release);
 	m_quit.store(false, std::memory_order_release);
@@ -273,10 +284,11 @@ void TaskScheduler::Run(uint const fiberPoolSize, TaskFunction const mainTask, v
 #endif
 
 	// Create the remaining threads
-	for (std::size_t i = 1; i < m_numThreads; ++i) {
-		auto *const threadArgs = new ThreadStartArgs();
-		threadArgs->Scheduler = this;
-		threadArgs->ThreadIndex = static_cast<uint>(i);
+	for (uint i = 1; i < m_numThreads; ++i) {
+		ThreadStartArgs *threadArgs = new ThreadStartArgs();
+		threadArgs->taskScheduler = this;
+		threadArgs->threadIndex = i;
+		threadArgs->threadInitCallback = thread_init_callback;
 
 		if (!CreateThread(524288, ThreadStart, threadArgs, i, &m_threads[i])) {
 			printf("Error: Failed to create all the worker threads");
@@ -322,7 +334,7 @@ void TaskScheduler::Run(uint const fiberPoolSize, TaskFunction const mainTask, v
 
 void TaskScheduler::AddTask(Task const task, AtomicCounter *const counter) {
 	if (counter != nullptr) {
-		counter->Store(1);
+		counter->FetchAdd(1);
 	}
 
 	const TaskBundle bundle = {task, counter};
@@ -345,7 +357,7 @@ void TaskScheduler::AddTask(Task const task, AtomicCounter *const counter) {
 
 void TaskScheduler::AddTasks(uint const numTasks, Task const *const tasks, AtomicCounter *const counter) {
 	if (counter != nullptr) {
-		counter->Store(numTasks);
+		counter->FetchAdd(numTasks);
 	}
 
 	ThreadLocalStorage &tls = m_tls[GetCurrentThreadIndex()];
