@@ -551,13 +551,13 @@ void TaskScheduler::AddReadyFiber(std::size_t const pinnedThreadIndex, std::size
 	}
 }
 
-void TaskScheduler::WaitForCounter(AtomicCounter *const counter, uint const value, bool const pinToCurrentThread) {
+ftl::TaskException TaskScheduler::WaitForCounter(AtomicCounter *const counter, uint const value, bool const pinToCurrentThread) {
 	// Fast out
-	if (counter->Load(std::memory_order_relaxed) == value) {
+	if (counter->Load(std::memory_order_seq_cst) == value) {
 		// wait for threads to drain from counter logic, otherwise we might continue too early
 		while (counter->m_lock.load() > 0) {
 		}
-		return;
+		return {};
 	}
 
 	ThreadLocalStorage &tls = m_tls[GetCurrentThreadIndex()];
@@ -576,7 +576,7 @@ void TaskScheduler::WaitForCounter(AtomicCounter *const counter, uint const valu
 	// Just clean up and trivially return
 	if (alreadyDone) {
 		delete fiberStoredFlag;
-		return;
+		return {};
 	}
 
 	// Get a free fiber
@@ -593,6 +593,7 @@ void TaskScheduler::WaitForCounter(AtomicCounter *const counter, uint const valu
 
 	// And we're back
 	CleanUpOldFiber();
+	return {};
 }
 
 } // End of namespace ftl

@@ -35,6 +35,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <vector>
+#include <exception>
 
 namespace ftl {
 
@@ -51,6 +52,10 @@ enum class EmptyQueueBehavior {
 	// Puts the thread to sleep. Will be woken when more tasks are added to the remaining awake threads.
 	Sleep
 	// ReSharper restore CppInconsistentNaming
+};
+
+struct TaskException {
+	std::exception_ptr inner_exception;
 };
 
 /**
@@ -214,7 +219,7 @@ public:
 	 * @param value               The value to wait for
 	 * @param pinToCurrentThread  If true, the task invoking this call will not resume on a different thread
 	 */
-	void WaitForCounter(AtomicCounter *counter, uint value, bool pinToCurrentThread = false);
+	ftl::TaskException WaitForCounter(AtomicCounter *counter, uint value, bool pinToCurrentThread = false);
 
 	/**
 	 * Gets the 0-based index of the current thread
