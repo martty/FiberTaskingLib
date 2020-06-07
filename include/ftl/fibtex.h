@@ -101,7 +101,9 @@ public:
 			if (m_atomicCounter.Set(std::memory_order_acq_rel)) {
 				return;
 			}
-			FTL_PAUSE();
+			while(m_atomicCounter.Load(std::memory_order_relaxed)){
+				FTL_PAUSE();
+			}
 		}
 
 		// Spinning didn't grab the lock, we're in for the long haul. Yield.
