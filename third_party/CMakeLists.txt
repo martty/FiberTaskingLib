@@ -33,28 +33,55 @@ endif()
 # CMake fails to generate the correct ninja files for MASM
 # https://gitlab.kitware.com/cmake/cmake/issues/18889
 # We hack a fix for this by manually setting the MASM compile options
-if (WIN32)
-	# Save the original flags
-	set(SAVED_LINKER_FLAGS ${CMAKE_STATIC_LINKER_FLAGS})
-	set(CMAKE_STATIC_LINKER_FLAGS "")
 
-    if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-        set(CMAKE_AR ${CMAKE_ASM_COMPILER_AR})
-    elseif(MSVC)
-        set(CMAKE_AR lib.exe)
-        set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreaded         "")
-        set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDLL      "")
-        set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebug    "")
-        set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebugDLL "")
-        set(CMAKE_ASM_MASM_CREATE_STATIC_LIBRARY "<CMAKE_AR> /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>")
-    endif()
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(FTL_COMPILER_CLANG TRUE)
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(FTL_COMPILER_GCC TRUE)
+elseif(MSVC)
+    set(FTL_COMPILER_MSVC TRUE)
+else()
+    set(FTL_COMPILER_UNKNOWN TRUE)
 endif()
+
+string(FIND "${CMAKE_CXX_COMPILER}" "clang++" FTL_COMPILER_CLANGPP)
+string(FIND "${CMAKE_CXX_COMPILER}" "clang-cl" FTL_COMPILER_CLANGCL)
+if(FTL_COMPILER_CLANGPP GREATER -1)
+  set(FTL_COMPILER_CLANGPP TRUE)
+else()
+  set(FTL_COMPILER_CLANGPP FALSE)
+endif()
+
+if(FTL_COMPILER_CLANGCL GREATER -1)
+  set(FTL_COMPILER_CLANGCL TRUE)
+else()
+  set(FTL_COMPILER_CLANGCL FALSE)
+endif()
+
+if (WIN32)
+  # Save the original flags
+  set(SAVED_LINKER_FLAGS ${CMAKE_STATIC_LINKER_FLAGS})
+  set(SAVED_CSL ${CMAKE_ASM_MASM_CREATE_STATIC_LIBRARY})
+  set(CMAKE_STATIC_LINKER_FLAGS "")
+
+  if(FTL_COMPILER_CLANGCL OR FTL_COMPILER_MSVC)
+    set(CMAKE_ASM_COMPILER_AR lib.exe)
+    set(CMAKE_AR lib.exe)
+    set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreaded         "")
+    set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDLL      "")
+    set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebug    "")
+    set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebugDLL "")
+    set(CMAKE_ASM_MASM_CREATE_STATIC_LIBRARY "<CMAKE_AR> /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>")
+  endif()
+endif()
+
 add_subdirectory(boost_context)
 set_target_properties(boost_context PROPERTIES FOLDER third_party)
 
 if (WIN32)
 	# Restore the original flags
 	set(CMAKE_STATIC_LINKER_FLAGS ${SAVED_LINKER_FLAGS})
+	set(CMAKE_ASM_MASM_CREATE_STATIC_LIBRARY ${SAVED_CSL})
 endif()
 
 
