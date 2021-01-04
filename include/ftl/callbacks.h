@@ -36,7 +36,7 @@ enum class FiberState : int {
 typedef void (*ThreadCreationCallback)(void *context, unsigned threadCount);
 typedef void (*FiberCreationCallback)(void *context, unsigned fiberCount);
 typedef void (*ThreadEventCallback)(void *context, unsigned threadIndex);
-typedef void (*FiberEventCallback)(void *context, unsigned fiberIndex, FiberState newState);
+typedef void (*FiberEventCallback)(void *context, char* stateBackup, unsigned fiberIndex, FiberState newState);
 
 struct EventCallbacks {
 	void *Context = nullptr;
