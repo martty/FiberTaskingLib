@@ -54,14 +54,23 @@ public:
 	 *
 	 * @param x    The value to add to the counter
 	 */
-	void Add(unsigned const x) {
-		m_value.fetch_add(x, std::memory_order_seq_cst);
+	unsigned Add(unsigned const x) {
+		return m_value.fetch_add(x, std::memory_order_seq_cst);
+	}
+
+	/**
+	* Return the current value of the counter
+	* 
+	* @param memoryOrder  Memory order to use for the atomic load
+	*/
+	unsigned Load(std::memory_order memoryOrder = std::memory_order_seq_cst) {
+		return m_value.load(memoryOrder);
 	}
 
 	/**
 	 * Decrement the counter by 1. If the new value would be zero, it will resume the waiting tasks.
 	 */
-	void Decrement() {
+	unsigned Decrement() {
 		m_lock.fetch_add(1U, std::memory_order_seq_cst);
 
 		const unsigned prev = m_value.fetch_sub(1U, std::memory_order_seq_cst);
@@ -73,6 +82,7 @@ public:
 		}
 
 		m_lock.fetch_sub(1U, std::memory_order_seq_cst);
+		return prev;
 	}
 };
 

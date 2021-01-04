@@ -155,6 +155,10 @@ public:
 		return m_value.exchange(1U, memoryOrder) == 0;
 	}
 
+	unsigned Load(std::memory_order const memoryOrder = std::memory_order_seq_cst) {
+		return m_value.load(memoryOrder);
+	}
+
 	bool Clear(std::memory_order const memoryOrder = std::memory_order_seq_cst) {
 		m_lock.fetch_add(1U, std::memory_order_seq_cst);
 
