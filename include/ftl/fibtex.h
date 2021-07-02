@@ -50,7 +50,7 @@ public:
 	 * @param fiberSlots       How many fibers can simultaneously wait on the mutex
 	 */
 	explicit Fibtex(TaskScheduler *taskScheduler, unsigned fiberSlots = NUM_WAITING_FIBER_SLOTS)
-	        : m_ableToSpin(taskScheduler->GetThreadCount() > 1), m_taskScheduler(taskScheduler),
+	        : m_taskScheduler(taskScheduler),
 	          m_atomicCounter(taskScheduler, 0, fiberSlots) {
 	}
 
@@ -62,7 +62,7 @@ public:
 	~Fibtex() = default;
 
 private:
-	bool m_ableToSpin;
+	bool m_ableToSpin = true;
 	TaskScheduler *m_taskScheduler;
 	AtomicFlag m_atomicCounter;
 
