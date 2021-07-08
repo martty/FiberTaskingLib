@@ -165,7 +165,7 @@ void TaskScheduler::FiberStartFunc(void *const arg) {
 			alignas(std::max_align_t) char stateBackup[32];
 
 			if (callbacks.OnFiberStateChanged) {
-				callbacks.OnFiberStateChanged(callbacks.Context, stateBackup, tls->OldFiberIndex, FiberState::Detached);
+				callbacks.OnFiberStateChanged(callbacks.Context, stateBackup, tls->OldFiberIndex, FiberState::Dead);
 			}
 
 			// Switch

@@ -30,7 +30,9 @@ enum class FiberState : int {
 	// The fiber has started execution on a worker thread
 	Attached,
 	// The fiber is no longer being executed on a worker thread
-	Detached
+	Detached,
+	// The fiber is dead
+	Dead
 };
 
 typedef void (*ThreadCreationCallback)(void *context, unsigned threadCount);
